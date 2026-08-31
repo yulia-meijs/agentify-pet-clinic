@@ -44,11 +44,13 @@ class SpringAiClinicAssistant implements ClinicAssistant {
 	private static final Pattern MUTATION_REQUEST = Pattern.compile(
 			"\\b(add|arrange|book|cancel|change|create|delete|edit|move|postpone|rebook|remove|reschedul\\w*|schedule|set|update)\\b");
 
-	private static final Pattern MEDICAL_REQUEST = Pattern
-		.compile("\\b(diagnos\\w*|dose|dosage|ill|medicine|medication|pain|sick|symptom\\w*)\\b");
+	private static final Pattern MEDICAL_REQUEST = Pattern.compile("\\b(diagnos\\w*|ill|pain|sick|symptom\\w*)\\b");
 
-	private static final Pattern TREATMENT_ADVICE_REQUEST = Pattern.compile(
-			"\\b(advice|give|how|recommend\\w*|should)\\b.*\\btreat\\w*\\b|\\btreat\\w*\\b.*\\b(advice|give|how|recommend\\w*|should)\\b");
+	private static final Pattern MEDICAL_RECORD_TERM = Pattern
+		.compile("\\b(dose|dosage|medicine|medication|treat\\w*)\\b");
+
+	private static final Pattern MEDICAL_ADVICE_REQUEST = Pattern.compile(
+			"\\b(advice|give|how|recommend\\w*|should|take)\\b.*\\b(dose|dosage|medicine|medication|treat\\w*)\\b|\\b(dose|dosage|medicine|medication|treat\\w*)\\b.*\\b(advice|give|how|recommend\\w*|should|take)\\b");
 
 	private final ChatModel chatModel;
 
@@ -70,8 +72,7 @@ class SpringAiClinicAssistant implements ClinicAssistant {
 		if (MUTATION_REQUEST.matcher(lowercaseQuestion).find()) {
 			return unsupported("This assistant is read-only and cannot change PetClinic records. No change was made.");
 		}
-		if (MEDICAL_REQUEST.matcher(lowercaseQuestion).find()
-				|| TREATMENT_ADVICE_REQUEST.matcher(lowercaseQuestion).find()) {
+		if (isMedicalAdviceRequest(lowercaseQuestion)) {
 			return unsupported("This assistant cannot provide veterinary diagnosis or treatment advice.");
 		}
 		if (normalizedQuestion.isEmpty()) {
@@ -79,7 +80,7 @@ class SpringAiClinicAssistant implements ClinicAssistant {
 		}
 
 		AtomicReference<OwnerSearchResult> toolResult = new AtomicReference<>();
-		OwnerLookupTool tool = new OwnerLookupTool(this.petClinicQuery, toolResult);
+		OwnerLookupTool tool = new OwnerLookupTool(this.petClinicQuery, toolResult, conversation, normalizedQuestion);
 		ChatClient.create(this.chatModel)
 			.prompt()
 			.system(SYSTEM_PROMPT)
@@ -89,6 +90,9 @@ class SpringAiClinicAssistant implements ClinicAssistant {
 			.content();
 
 		OwnerSearchResult result = toolResult.get();
+		if (tool.rejectedUnauthorizedLookup()) {
+			return unsupported("This assistant could not resolve an owner last name from the conversation.");
+		}
 		if (result == null) {
 			return unsupported("This assistant only supports owner lookup by last name.");
 		}
@@ -129,7 +133,7 @@ class SpringAiClinicAssistant implements ClinicAssistant {
 		}
 		for (int index = turns.size() - 1; index >= 0; index--) {
 			ConversationTurn turn = turns.get(index);
-			selected = ownersMentionedIn(owners, turn.question() + " " + turn.answer());
+			selected = ownersMentionedIn(owners, turn.question());
 			if (selected.size() == 1) {
 				return selected;
 			}
@@ -148,9 +152,17 @@ class SpringAiClinicAssistant implements ClinicAssistant {
 	}
 
 	private static boolean isVisitQuestion(String lowercaseQuestion) {
-		return Pattern.compile("\\b(appointment\\w*|histor\\w*|recorded|visit\\w*)\\b")
+		return Pattern.compile("\\b(appointment\\w*|histor\\w*|recorded|visit\\w*)\\b|\\b\\d{4}-\\d{2}-\\d{2}\\b")
 			.matcher(lowercaseQuestion)
 			.find();
+	}
+
+	private static boolean isMedicalAdviceRequest(String lowercaseQuestion) {
+		if (MEDICAL_REQUEST.matcher(lowercaseQuestion).find()
+				|| MEDICAL_ADVICE_REQUEST.matcher(lowercaseQuestion).find()) {
+			return true;
+		}
+		return MEDICAL_RECORD_TERM.matcher(lowercaseQuestion).find() && !isVisitQuestion(lowercaseQuestion);
 	}
 
 	private static String formatVisits(OwnerSummary owner, List<ConversationTurn> turns, String question) {
@@ -225,18 +237,44 @@ class SpringAiClinicAssistant implements ClinicAssistant {
 
 		private final AtomicReference<OwnerSearchResult> result;
 
-		private OwnerLookupTool(PetClinicQuery petClinicQuery, AtomicReference<OwnerSearchResult> result) {
+		private final List<String> staffQuestions;
+
+		private boolean rejectedUnauthorizedLookup;
+
+		private OwnerLookupTool(PetClinicQuery petClinicQuery, AtomicReference<OwnerSearchResult> result,
+				List<ConversationTurn> turns, String question) {
 			this.petClinicQuery = petClinicQuery;
 			this.result = result;
+			this.staffQuestions = new java.util.ArrayList<>(turns.stream().map(ConversationTurn::question).toList());
+			this.staffQuestions.add(question);
 		}
 
 		@Tool(name = TOOL_NAME,
 				description = "Find PetClinic owners whose last name starts with the supplied prefix. Returns only owner full names, pet names and types, and recorded visit dates and descriptions.")
 		OwnerSearchResult findOwnersByLastName(
 				@ToolParam(description = "The owner's last-name prefix") String lastNamePrefix) {
+			if (!isAuthorizedPrefix(lastNamePrefix)) {
+				this.rejectedUnauthorizedLookup = true;
+				return new OwnerSearchResult(List.of());
+			}
 			OwnerSearchResult searchResult = this.petClinicQuery.findOwnersByLastName(lastNamePrefix);
 			this.result.set(searchResult);
 			return searchResult;
+		}
+
+		private boolean isAuthorizedPrefix(String lastNamePrefix) {
+			if (lastNamePrefix == null || lastNamePrefix.isBlank()) {
+				return false;
+			}
+			Pattern prefix = Pattern
+				.compile("\\b" + Pattern.quote(lastNamePrefix.trim().toLowerCase(Locale.ROOT)) + "\\p{L}*\\b");
+			return this.staffQuestions.stream()
+				.map(question -> question.toLowerCase(Locale.ROOT))
+				.anyMatch(question -> prefix.matcher(question).find());
+		}
+
+		private boolean rejectedUnauthorizedLookup() {
+			return this.rejectedUnauthorizedLookup;
 		}
 
 	}

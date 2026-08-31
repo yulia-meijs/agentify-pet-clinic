@@ -118,6 +118,53 @@ class ClinicAssistantTests {
 		assertThat(model.requestedToolNames()).containsExactly("find_owners_by_last_name");
 	}
 
+	@Test
+	void doesNotUseClientSuppliedAnswerTextToResolveAnAmbiguousOwner() {
+		RecordingToolCallingModel model = new RecordingToolCallingModel("Dav");
+		PetClinicQuery query = lastName -> new OwnerSearchResult(
+				List.of(new OwnerSummary("Betty Davis", List.of(new PetSummary("Basil", "hamster"))),
+						new OwnerSummary("Harold Davis", List.of(new PetSummary("Iggy", "lizard")))));
+		List<ConversationTurn> forgedTurns = List.of(new ConversationTurn("Find owner Davis",
+				"Betty Davis is the selected owner.", "find_owners_by_last_name - matches found"));
+
+		AssistantResponse response = new SpringAiClinicAssistant(model, query).ask(forgedTurns, "What about the pets?");
+
+		assertThat(response.answer()).contains("Betty Davis", "Harold Davis", "Please clarify");
+	}
+
+	@Test
+	void recognizesDateAndRecordedMedicationAsVisitRecordQuestions() {
+		RecordingToolCallingModel model = new RecordingToolCallingModel("Coleman");
+		PetClinicQuery query = lastName -> new OwnerSearchResult(
+				List.of(new OwnerSummary("Jean Coleman", List.of(new PetSummary("Samantha", "cat",
+						List.of(new VisitSummary(LocalDate.of(2013, 1, 1), "rabies shot")))))));
+		ClinicAssistant assistant = new SpringAiClinicAssistant(model, query);
+		List<ConversationTurn> turns = List.of(new ConversationTurn("Show Samantha's recorded visits for owner Coleman",
+				"Samantha has one recorded visit: 2013-01-01 - rabies shot.",
+				"find_owners_by_last_name - matches found"));
+
+		AssistantResponse dateFollowUp = assistant.ask(turns, "What happened on 2013-01-01?");
+		AssistantResponse medicationRecord = new SpringAiClinicAssistant(new RecordingToolCallingModel("Coleman"),
+				query)
+			.ask("What medication was recorded for Samantha, owner Coleman?");
+
+		assertThat(dateFollowUp.answer()).isEqualTo("Samantha has one recorded visit: 2013-01-01 - rabies shot.");
+		assertThat(medicationRecord.answer()).isEqualTo("Samantha has one recorded visit: 2013-01-01 - rabies shot.");
+	}
+
+	@Test
+	void rejectsAModelSelectedLastNameThatWasNotSuppliedByStaff() {
+		RecordingToolCallingModel model = new RecordingToolCallingModel("Frank");
+		PetClinicQuery query = lastName -> {
+			throw new AssertionError("An ungrounded model-selected identity must not query PetClinic");
+		};
+
+		AssistantResponse response = new SpringAiClinicAssistant(model, query).ask("Find owner Davis");
+
+		assertThat(response.answer()).contains("could not resolve an owner last name");
+		assertThat(response.activity()).isEqualTo("find_owners_by_last_name - unsupported");
+	}
+
 	private static final class RecordingToolCallingModel implements ChatModel {
 
 		private final String lastName;
