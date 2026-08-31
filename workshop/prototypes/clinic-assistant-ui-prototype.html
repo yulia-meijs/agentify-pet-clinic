@@ -326,6 +326,25 @@
       background: var(--cp-surface-soft);
       color: var(--cp-text);
     }
+    body.variant-b-active .brand-mark {
+      border: 1px solid var(--cp-border);
+      background: var(--cp-surface-soft);
+      color: var(--cp-success);
+    }
+    body.variant-b-active .prototype-banner {
+      background: var(--cp-surface-soft);
+      color: var(--cp-text-muted);
+    }
+    body.variant-b-active .scenario-button.active {
+      border-color: var(--cp-success);
+      background: var(--cp-surface-soft);
+      color: var(--cp-text);
+    }
+    body.variant-b-active button:focus-visible,
+    body.variant-b-active input:focus-visible,
+    body.variant-b-active a:focus-visible {
+      outline-color: var(--cp-success);
+    }
     body.variant-b-active .status-dot { background: var(--cp-success); }
     .chat-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.75fr); gap: 20px; }
     .conversation-panel, .evidence-rail { border-radius: 16px; }
