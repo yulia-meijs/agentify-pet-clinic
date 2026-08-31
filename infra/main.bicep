@@ -4,6 +4,7 @@ targetScope = 'subscription'
 param environmentName string
 
 param location string
+param openAiLocation string
 param modelName string = 'gpt-5.4-mini'
 param modelVersion string = '2026-03-17'
 param modelDeploymentName string = 'gpt-5-4-mini'
@@ -30,7 +31,8 @@ module resources 'resources.bicep' = {
   scope: resourceGroup
   params: {
     environmentName: environmentName
-    location: location
+    appServiceLocation: location
+    openAiLocation: openAiLocation
     modelName: modelName
     modelVersion: modelVersion
     modelDeploymentName: modelDeploymentName
@@ -41,6 +43,7 @@ module resources 'resources.bicep' = {
 }
 
 output AZURE_LOCATION string = location
+output AZURE_OPENAI_LOCATION string = openAiLocation
 output AZURE_RESOURCE_GROUP_NAME string = resourceGroup.name
 output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId
 output AZURE_TENANT_ID string = tenant().tenantId

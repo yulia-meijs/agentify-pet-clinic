@@ -7,6 +7,7 @@ library="$root/scripts/lib/workshop-azure.sh"
 fake_command="$root/scripts/fixtures/workshop-azure/fake-command.sh"
 scratch="$root/scripts/.test-azure-readiness.$$"
 subscription_id="11111111-2222-3333-4444-555555555555"
+principal_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
 
 cleanup() {
   rm -rf "$scratch"
@@ -50,8 +51,8 @@ make_fixture() {
   add_call "$fixture_dir" "$call_number" az "$subscription_id" \
     account show --query id --output tsv
   ((call_number += 1))
-  add_call "$fixture_dir" "$call_number" az 'user@example.com' \
-    account show --query user.name --output tsv
+  add_call "$fixture_dir" "$call_number" az "$principal_id" \
+    ad signed-in-user show --query id --output tsv
   ((call_number += 1))
   add_call "$fixture_dir" "$call_number" azd '' auth login --check-status
   ((call_number += 1))
@@ -73,13 +74,13 @@ make_fixture() {
     provider show --namespace Microsoft.Authorization --query registrationState --output tsv
   ((call_number += 1))
   add_call "$fixture_dir" "$call_number" az \
-    '[{"name":"Sweden Central"}]' \
+    '[{"name":"West Central US"}]' \
     appservice list-locations --sku B1 --linux-workers-enabled --output json
   ((call_number += 1))
   add_call "$fixture_dir" "$call_number" az \
-    '{"value":[{"name":{"localizedValue":"Basic"},"currentValue":0,"limit":-1}]}' \
+    '{"value":[{"name":{"localizedValue":"Total Regional VMs"},"currentValue":0,"limit":1}]}' \
     rest --method get --url \
-    "https://management.azure.com/subscriptions/$subscription_id/providers/Microsoft.Web/locations/swedencentral/usages?api-version=2024-04-01" \
+    "https://management.azure.com/subscriptions/$subscription_id/providers/Microsoft.Web/locations/westcentralus/usages?api-version=2026-07-15" \
     --output json
   ((call_number += 1))
   add_call "$fixture_dir" "$call_number" az \
@@ -92,7 +93,7 @@ make_fixture() {
   ((call_number += 1))
   add_call "$fixture_dir" "$call_number" az \
     '[{"roleDefinitionName":"Owner","scope":"/subscriptions/11111111-2222-3333-4444-555555555555"}]' \
-    role assignment list --assignee user@example.com \
+    role assignment list --assignee "$principal_id" \
     --scope "/subscriptions/$subscription_id" --include-inherited --include-groups \
     --output json
 }
@@ -153,6 +154,8 @@ grep -Fqx 'ERROR: sentinel failure' "$library_fail_output"
 make_fixture success
 run_case success 0
 grep -Fq 'subscription: 11111111...5555' "$scratch/success/stdout"
+grep -Fqx 'App Service location: West Central US (westcentralus)' "$scratch/success/stdout"
+grep -Fqx 'Foundry location: Sweden Central (swedencentral)' "$scratch/success/stdout"
 ! grep -Fq "$subscription_id" "$scratch/success/stdout"
 [[ ! -s "$scratch/success/stderr" ]] ||
   fail_test "success emitted stderr: $(cat "$scratch/success/stderr")"
@@ -161,6 +164,11 @@ grep -Fq 'subscription: 11111111...5555' "$scratch/success/stdout"
 make_fixture success-with-azd-subscription azd
 run_case success-with-azd-subscription 0 '' unset
 [[ "$(wc -l <"$scratch/success-with-azd-subscription/commands.log")" -eq 13 ]]
+
+make_fixture windows-crlf-identifiers
+replace_stdout windows-crlf-identifiers 1 az "$subscription_id"$'\r'
+replace_stdout windows-crlf-identifiers 2 az "$principal_id"$'\r'
+run_case windows-crlf-identifiers 0
 
 make_fixture missing-azd
 rm "$scratch/missing-azd/bin/azd"
@@ -217,30 +225,36 @@ run_case unregistered-provider 1 \
 make_fixture absent-b1-region
 replace_stdout absent-b1-region 8 az '[]'
 run_case absent-b1-region 1 \
-  'ERROR: B1 Linux App Service is unavailable in Sweden Central (swedencentral)'
+  'ERROR: B1 Linux App Service is unavailable in West Central US (westcentralus)'
 
 make_fixture invalid-b1-response
 replace_stdout invalid-b1-response 8 az '{}'
 run_case invalid-b1-response 1 \
   'ERROR: B1 Linux App Service location response was invalid; verify Microsoft.Web access and retry'
 
-make_fixture basic-limit-zero
-replace_stdout basic-limit-zero 9 az \
-  '{"value":[{"name":{"localizedValue":"Basic"},"currentValue":0,"limit":0}]}'
-run_case basic-limit-zero 1 \
-  'ERROR: Basic App Service quota is zero in Sweden Central; request quota or choose another subscription'
+make_fixture regional-vm-limit-zero
+replace_stdout regional-vm-limit-zero 9 az \
+  '{"value":[{"name":{"localizedValue":"Total Regional VMs"},"currentValue":0,"limit":0}]}'
+run_case regional-vm-limit-zero 1 \
+  'ERROR: App Service regional VM quota is zero in West Central US; request quota or choose another subscription'
 
-make_fixture basic-limit-unknown
-replace_stdout basic-limit-unknown 9 az \
-  '{"value":[{"name":{"localizedValue":"Basic"},"currentValue":0,"limit":-2}]}'
-run_case basic-limit-unknown 1 \
-  'ERROR: Basic App Service quota is unknown in Sweden Central; check quota in the Azure portal'
+make_fixture regional-vm-limit-unknown
+replace_stdout regional-vm-limit-unknown 9 az \
+  '{"value":[{"name":{"localizedValue":"Total Regional VMs"},"currentValue":0,"limit":-2}]}'
+run_case regional-vm-limit-unknown 1 \
+  'ERROR: App Service regional VM quota is unknown in West Central US; check quota in the Azure portal'
 
-make_fixture basic-limit-empty
-replace_stdout basic-limit-empty 9 az \
-  '{"value":[{"name":{"localizedValue":"Basic"},"currentValue":0,"limit":null}]}'
-run_case basic-limit-empty 1 \
-  'ERROR: Basic App Service quota was not reported for Sweden Central; check quota in the Azure portal'
+make_fixture regional-vm-limit-empty
+replace_stdout regional-vm-limit-empty 9 az \
+  '{"value":[{"name":{"localizedValue":"Total Regional VMs"},"currentValue":0,"limit":null}]}'
+run_case regional-vm-limit-empty 1 \
+  'ERROR: App Service regional VM quota was not reported for West Central US; check quota in the Azure portal'
+
+make_fixture regional-vm-limit-exhausted
+replace_stdout regional-vm-limit-exhausted 9 az \
+  '{"value":[{"name":{"localizedValue":"Total Regional VMs"},"currentValue":1,"limit":1}]}'
+run_case regional-vm-limit-exhausted 1 \
+  'ERROR: App Service regional VM quota is exhausted in West Central US; request quota or remove an existing plan'
 
 make_fixture missing-model
 replace_stdout missing-model 10 az \

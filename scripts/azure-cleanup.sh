@@ -5,8 +5,8 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=lib/workshop-azure.sh
 source "$root/scripts/lib/workshop-azure.sh"
 
-readonly CLEANUP_COMMAND_VERSION='1.0.0'
-readonly CLEANUP_EVIDENCE_SCHEMA_VERSION='1.0'
+readonly CLEANUP_COMMAND_VERSION='1.1.0'
+readonly CLEANUP_EVIDENCE_SCHEMA_VERSION='1.1'
 
 evidence_dir="${WORKSHOP_AZURE_EVIDENCE_DIR:-$root/.workshop-evidence}"
 
@@ -34,7 +34,7 @@ foundry="$(azd_value_optional AZURE_OPENAI_ACCOUNT_NAME)"
 if [[ -z "$foundry" ]]; then
   foundry="${WORKSHOP_AZURE_FOUNDRY_NAME:-}"
 fi
-location="$(azd_value AZURE_LOCATION)"
+location="$(azd_value AZURE_OPENAI_LOCATION)"
 resource_group="$(azd_value_optional AZURE_RESOURCE_GROUP_NAME)"
 environment_name="$(azd_value_optional AZURE_ENV_NAME)"
 subscription_id="$(azd_value AZURE_SUBSCRIPTION_ID)"
@@ -194,7 +194,7 @@ cat >"$evidence_file" <<EOF
 - Evidence schema version: \`$CLEANUP_EVIDENCE_SCHEMA_VERSION\`
 - UTC: \`$cleanup_time\`
 - Subscription: \`$(redact_subscription "$subscription_id")\`
-- Region: \`$location\`
+- Foundry location: \`$location\`
 - Environment: \`$safe_environment\`
 - Explicit Foundry purge required: \`$explicit_purge_required\`
 - Resource group absent: \`PASS\`

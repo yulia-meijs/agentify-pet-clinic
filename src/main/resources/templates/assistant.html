@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'assistant')}">
+
+<body>
+
+  <main class="assistant-shell">
+    <section class="conversation-panel">
+      <header class="conversation-header">
+        <div class="assistant-identity">
+          <span class="assistant-avatar" aria-hidden="true"><span class="glyphicon glyphicon-heart"></span></span>
+          <div>
+            <h2 th:text="#{clinicAssistant}">Clinic Assistant</h2>
+            <p th:text="#{clinicAssistantDescription}">Ask about owners, pets, and recorded visits.</p>
+          </div>
+        </div>
+      </header>
+
+      <div id="conversation" class="conversation-scroll" aria-live="polite">
+        <div class="friendly-intro" th:text="#{assistantIntro}">
+          Ask for an owner, their pets, or a recorded visit. Follow-up questions stay in this tab.
+        </div>
+        <div class="message-row assistant" th:if="${answer}">
+          <article class="message">
+            <strong th:text="#{clinicAssistant}">Clinic Assistant</strong>
+            <p th:text="${answer}">Grounded answer</p>
+            <code th:if="${activity}" th:text="${activity}">read tool - outcome</code>
+          </article>
+        </div>
+      </div>
+
+      <div class="conversation-composer">
+        <form id="assistant-form" th:action="@{/assistant}" th:attr="data-messages-url=@{/assistant/messages},
+            data-you-label=#{assistantYou},
+            data-assistant-label=#{clinicAssistant},
+            data-intro=#{assistantIntro},
+            data-waiting=#{assistantWaiting},
+            data-limit-error=#{assistantLimitError},
+            data-empty-error=#{assistantEmptyError},
+            data-generic-error=#{assistantGenericError},
+            data-network-error=#{assistantNetworkError}" method="post">
+          <label class="sr-only" for="question" th:text="#{question}">Question</label>
+          <div class="assistant-composer-row">
+            <input class="form-control" id="question" name="question" th:value="${question}" maxlength="200"
+              th:placeholder="#{assistantPlaceholder}" placeholder="Ask a question about a clinic record"
+              autocomplete="off" />
+            <button type="submit" class="btn btn-primary" th:text="#{ask}">Ask</button>
+            <button id="reset-conversation" type="button" class="btn btn-default"
+              th:text="#{assistantReset}">Reset</button>
+          </div>
+          <div class="composer-meta">
+            <p id="assistant-error" class="help-block text-danger" th:text="${error}"></p>
+            <span class="turn-count"><span id="turn-count" th:text="${0}"></span>
+              <span th:text="#{assistantTurnCount}">of 6 questions used</span></span>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <aside class="evidence-rail">
+      <section class="rail-section">
+        <p class="rail-kicker" th:text="#{assistantAboutAnswer}">About this answer</p>
+        <h3 th:text="#{assistantPetClinicLookup}">PetClinic lookup</h3>
+        <div class="trace-entry">
+          <code th:text="#{assistantToolName}">find_owners_by_last_name</code>
+          <strong id="latest-activity" th:text="#{assistantWaiting}">Waiting for a question</strong>
+        </div>
+      </section>
+
+      <section class="rail-section">
+        <h3 th:text="#{assistantGoodToKnow}">Good to know</h3>
+        <div class="boundary-grid">
+          <div class="boundary">
+            <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+            <span><strong th:text="#{assistantGroundedTitle}">From clinic records</strong>
+              <small th:text="#{assistantGroundedDescription}">Only retrieved PetClinic details</small></span>
+          </div>
+          <div class="boundary">
+            <span class="glyphicon glyphicon-ok" aria-hidden="true"></span>
+            <span><strong th:text="#{assistantReadOnlyTitle}">Safe and read-only</strong>
+              <small th:text="#{assistantReadOnlyDescription}">Nothing can be changed here</small></span>
+          </div>
+          <div class="boundary muted-boundary">
+            <span class="glyphicon glyphicon-minus" aria-hidden="true"></span>
+            <span><strong th:text="#{assistantMedicalTitle}">Ask your veterinarian</strong>
+              <small th:text="#{assistantMedicalDescription}">No diagnosis or treatment advice</small></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="rail-section">
+        <h3 th:text="#{assistantTryExample}">Try an example</h3>
+        <div class="assistant-examples">
+          <button type="button" class="btn btn-default btn-sm" data-example="Find owner Coleman"
+            th:text="#{assistantExampleOwner}">Find owner Coleman</button>
+          <button type="button" class="btn btn-default btn-sm" data-example="What recorded visits has Samantha had?"
+            th:text="#{assistantExampleVisits}">Samantha's recorded visits</button>
+        </div>
+      </section>
+
+      <section class="rail-section rail-scope">
+        <span class="glyphicon glyphicon-lock" aria-hidden="true"></span>
+        <p th:text="#{assistantScope}">
+          Up to six questions in this tab. Refresh or Reset clears the conversation.
+        </p>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    (() => {
+      const maxTurns = 6;
+      const turns = [];
+      const form = document.getElementById("assistant-form");
+      const conversation = document.getElementById("conversation");
+      const question = document.getElementById("question");
+      const reset = document.getElementById("reset-conversation");
+      const count = document.getElementById("turn-count");
+      const submit = form.querySelector("button[type='submit']");
+      const latestActivity = document.getElementById("latest-activity");
+      const error = document.getElementById("assistant-error");
+      let pending = false;
+
+      const showError = (message) => {
+        error.textContent = message;
+      };
+
+      const message = (role, label, text, activity) => {
+        const row = document.createElement("div");
+        row.className = `message-row ${role}`;
+        const card = document.createElement("article");
+        card.className = "message";
+        const heading = document.createElement("strong");
+        heading.textContent = label;
+        const content = document.createElement("p");
+        content.textContent = text;
+        card.append(heading, content);
+        if (activity) {
+          const trace = document.createElement("code");
+          trace.textContent = activity;
+          card.append(trace);
+        }
+        row.append(card);
+        return row;
+      };
+
+      const render = () => {
+        conversation.replaceChildren();
+        if (turns.length === 0) {
+          const intro = document.createElement("div");
+          intro.className = "friendly-intro";
+          intro.textContent = form.dataset.intro;
+          conversation.append(intro);
+        }
+        turns.forEach((turn) => {
+          conversation.append(
+            message("user", form.dataset.youLabel, turn.question),
+            message("assistant", form.dataset.assistantLabel, turn.answer, turn.activity)
+          );
+        });
+        count.textContent = turns.length;
+        latestActivity.textContent = turns.length ? turns[turns.length - 1].activity : form.dataset.waiting;
+        submit.disabled = pending || turns.length >= maxTurns;
+        conversation.scrollTop = conversation.scrollHeight;
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (pending || !question.value.trim() || turns.length >= maxTurns) {
+          showError(turns.length >= maxTurns ? form.dataset.limitError : form.dataset.emptyError);
+          return;
+        }
+        error.textContent = "";
+        const currentQuestion = question.value.trim();
+        pending = true;
+        render();
+        try {
+          const response = await fetch(form.dataset.messagesUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ turns, question: currentQuestion })
+          });
+          if (!response.ok) {
+            const problem = await response.json();
+            showError(problem.detail || form.dataset.genericError);
+            return;
+          }
+          const result = await response.json();
+          turns.push({ question: currentQuestion, answer: result.answer, activity: result.activity });
+          question.value = "";
+        } catch {
+          showError(form.dataset.networkError);
+        } finally {
+          pending = false;
+          render();
+        }
+        question.focus();
+      });
+
+      reset.addEventListener("click", () => {
+        turns.length = 0;
+        error.textContent = "";
+        render();
+        question.focus();
+      });
+
+      document.querySelectorAll("[data-example]").forEach((button) => {
+        button.addEventListener("click", () => {
+          question.value = button.dataset.example;
+          question.focus();
+        });
+      });
+
+      render();
+    })();
+  </script>
+
+</body>
+
+</html>

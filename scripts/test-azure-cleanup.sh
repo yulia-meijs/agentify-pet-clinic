@@ -69,7 +69,7 @@ start_fixture() {
   done
 
   add_call "$fixture_dir" 1 azd "$foundry" env get-value AZURE_OPENAI_ACCOUNT_NAME
-  add_call "$fixture_dir" 2 azd "$location" env get-value AZURE_LOCATION
+  add_call "$fixture_dir" 2 azd "$location" env get-value AZURE_OPENAI_LOCATION
   add_call "$fixture_dir" 3 azd "$resource_group" env get-value AZURE_RESOURCE_GROUP_NAME
   add_call "$fixture_dir" 4 azd "$environment_name" env get-value AZURE_ENV_NAME
   add_call "$fixture_dir" 5 azd "$subscription_id" env get-value AZURE_SUBSCRIPTION_ID
@@ -275,11 +275,11 @@ run_case normal-purge 0
 evidence="$scratch/normal-purge/evidence/cleanup-20260814T092537Z.md"
 test -f "$evidence" || fail_test 'timestamped cleanup evidence was not created'
 for expected in \
-  'Command version: `1.0.0`' \
-  'Evidence schema version: `1.0`' \
+  'Command version: `1.1.0`' \
+  'Evidence schema version: `1.1`' \
   'UTC: `2026-08-14T09:25:37Z`' \
   'Subscription: `11111111...5555`' \
-  'Region: `swedencentral`' \
+  'Foundry location: `swedencentral`' \
   'Environment: `workshop-safe`' \
   'Explicit Foundry purge required: `no`' \
   'Resource group absent: `PASS`' \

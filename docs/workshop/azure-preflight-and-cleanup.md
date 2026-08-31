@@ -81,7 +81,8 @@ The tested defaults are:
 
 | Setting | Default |
 | --- | --- |
-| Region | Sweden Central (`swedencentral`) |
+| App Service region | West Central US (`westcentralus`) |
+| Foundry region | Sweden Central (`swedencentral`) |
 | App Service | Linux Basic B1, Java 21 |
 | Model | `gpt-5.4-mini` |
 | Model version | `2026-03-17` |
@@ -92,8 +93,10 @@ The tested defaults are:
 The scripts read these deliberate shell overrides:
 
 ```bash
-export AZURE_LOCATION=swedencentral
-export AZURE_LOCATION_DISPLAY_NAME='Sweden Central'
+export AZURE_LOCATION=westcentralus
+export AZURE_LOCATION_DISPLAY_NAME='West Central US'
+export AZURE_OPENAI_LOCATION=swedencentral
+export AZURE_OPENAI_LOCATION_DISPLAY_NAME='Sweden Central'
 export AZURE_OPENAI_MODEL=gpt-5.4-mini
 export AZURE_OPENAI_MODEL_VERSION=2026-03-17
 export AZURE_OPENAI_DEPLOYMENT=gpt-5-4-mini
@@ -101,10 +104,13 @@ export AZURE_OPENAI_DEPLOYMENT_SKU=GlobalStandard
 export AZURE_OPENAI_DEPLOYMENT_CAPACITY=10
 ```
 
-Do not change only one side of this contract. `AZURE_LOCATION` must also be set
-in the `azd` environment. Model, version, deployment, SKU, and capacity are
-pinned in `infra/main.bicep`; a different model envelope requires a coordinated
-template change from the workshop owner, not an attendee-only shell override.
+Do not change only one side of this contract. `AZURE_LOCATION` and
+`AZURE_OPENAI_LOCATION` must also be set in the `azd` environment. The resource
+group and App Service use `AZURE_LOCATION`; Foundry and its model deployment use
+`AZURE_OPENAI_LOCATION`. Model, version, deployment, SKU, and capacity are
+pinned in `infra/main.bicep`; a different location or model envelope requires a
+coordinated template change from the workshop owner, not an attendee-only shell
+override.
 
 ## Create the environment and check readiness
 
@@ -115,7 +121,8 @@ Azure CLI subscription and region, and record a UTC cleanup deadline:
 environment_name="workshop-preflight-$(date -u +%Y%m%d%H%M%S)"
 azd env new "$environment_name"
 azd env set AZURE_SUBSCRIPTION_ID "$(az account show --query id -o tsv)"
-azd env set AZURE_LOCATION swedencentral
+azd env set AZURE_LOCATION westcentralus
+azd env set AZURE_OPENAI_LOCATION swedencentral
 export WORKSHOP_AZURE_CLEANUP_DEADLINE=2026-08-15T17:00:00Z
 ```
 

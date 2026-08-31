@@ -9382,6 +9382,212 @@ table td.action-column {
 .status-help-content-table td {
   color: #34302D; }
 
+.assistant-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(270px, 0.75fr);
+  gap: 20px;
+  margin: 8px 0 40px; }
+  .assistant-shell .conversation-panel,
+  .assistant-shell .evidence-rail {
+    overflow: hidden;
+    border: 1px solid #d8d8d8;
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(52, 48, 45, 0.12); }
+  .assistant-shell .conversation-panel {
+    display: flex;
+    min-height: 650px;
+    flex-direction: column; }
+  .assistant-shell .conversation-header {
+    position: relative;
+    padding: 20px 24px;
+    border-bottom: 1px solid #dddddd; }
+  .assistant-shell .assistant-identity {
+    display: flex;
+    align-items: center;
+    gap: 12px; }
+    .assistant-shell .assistant-identity h2, .assistant-shell .assistant-identity .h2 {
+      margin: 0 0 2px;
+      font-size: 20px; }
+    .assistant-shell .assistant-identity p {
+      margin: 0;
+      color: #838789;
+      font-size: 13px; }
+  .assistant-shell .assistant-avatar {
+    display: inline-flex;
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d8d8d8;
+    border-radius: 14px;
+    background: #e4f2db;
+    color: #5fa134;
+    font-size: 18px; }
+  .assistant-shell .conversation-scroll {
+    overflow-y: auto;
+    min-height: 380px;
+    flex: 1;
+    padding: 28px 24px;
+    background: #f9f9f9; }
+  .assistant-shell .friendly-intro {
+    max-width: 560px;
+    margin: 0 auto 26px;
+    padding: 14px 16px;
+    border: 1px solid #dddddd;
+    border-radius: 16px;
+    background: white;
+    color: #838789;
+    text-align: center;
+    line-height: 1.5; }
+  .assistant-shell .message-row {
+    display: flex;
+    margin-bottom: 18px; }
+    .assistant-shell .message-row.user {
+      justify-content: flex-end; }
+      .assistant-shell .message-row.user .message {
+        border-color: #c3c3c3;
+        background: #f1f1f1; }
+    .assistant-shell .message-row.assistant .message {
+      border-left: 3px solid #6db33f; }
+  .assistant-shell .message {
+    max-width: 86%;
+    padding: 15px 17px;
+    border: 1px solid #dddddd;
+    border-radius: 16px;
+    background: white;
+    line-height: 1.55; }
+    .assistant-shell .message strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px; }
+    .assistant-shell .message p {
+      margin-bottom: 8px;
+      white-space: pre-wrap; }
+    .assistant-shell .message code {
+      color: #5fa134;
+      background: transparent; }
+  .assistant-shell .conversation-composer {
+    padding: 18px 20px;
+    border-top: 1px solid #dddddd; }
+  .assistant-shell .assistant-composer-row {
+    display: flex;
+    gap: 8px; }
+    .assistant-shell .assistant-composer-row .form-control {
+      min-width: 0;
+      height: 44px;
+      flex: 1;
+      border-radius: 10px; }
+    .assistant-shell .assistant-composer-row .btn {
+      height: 44px;
+      margin-top: 0;
+      border-radius: 10px; }
+  .assistant-shell .composer-meta {
+    display: flex;
+    min-height: 24px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 7px;
+    color: #838789;
+    font-size: 12px; }
+    .assistant-shell .composer-meta .help-block {
+      margin: 0; }
+    .assistant-shell .composer-meta .turn-count {
+      flex: none; }
+  .assistant-shell .evidence-rail {
+    position: relative;
+    align-self: start;
+    box-shadow: none; }
+    .assistant-shell .evidence-rail::before {
+      display: block;
+      height: 5px;
+      content: "";
+      background: #6db33f; }
+  .assistant-shell .rail-section {
+    padding: 20px;
+    border-bottom: 1px solid #dddddd; }
+    .assistant-shell .rail-section:last-child {
+      border-bottom: 0; }
+    .assistant-shell .rail-section h3, .assistant-shell .rail-section .h3 {
+      margin: 0 0 14px;
+      font-size: 16px; }
+  .assistant-shell .rail-kicker {
+    margin: 0 0 5px;
+    color: #5fa134;
+    font-size: 12px;
+    font-weight: 700; }
+  .assistant-shell .trace-entry {
+    padding: 12px;
+    border: 1px solid #dddddd;
+    border-radius: 10px;
+    background: #f1f1f1; }
+    .assistant-shell .trace-entry code,
+    .assistant-shell .trace-entry strong {
+      display: block; }
+    .assistant-shell .trace-entry code {
+      margin-bottom: 6px;
+      color: #34302D; }
+    .assistant-shell .trace-entry strong {
+      color: #5fa134;
+      font-size: 12px; }
+  .assistant-shell .boundary-grid {
+    display: grid;
+    gap: 12px; }
+  .assistant-shell .boundary {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 8px;
+    color: #5fa134;
+    font-size: 12px;
+    line-height: 1.4; }
+    .assistant-shell .boundary strong,
+    .assistant-shell .boundary small,
+    .assistant-shell .boundary .small {
+      display: block; }
+    .assistant-shell .boundary strong {
+      color: #34302D; }
+    .assistant-shell .boundary small, .assistant-shell .boundary .small {
+      color: #838789; }
+    .assistant-shell .boundary.muted-boundary {
+      color: #838789; }
+  .assistant-shell .assistant-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px; }
+    .assistant-shell .assistant-examples .btn {
+      border-radius: 10px;
+      white-space: normal; }
+  .assistant-shell .rail-scope {
+    display: grid;
+    grid-template-columns: 18px 1fr;
+    gap: 8px;
+    color: #838789;
+    font-size: 12px; }
+    .assistant-shell .rail-scope p {
+      margin: 0; }
+
+@media (max-width: 991px) {
+  .assistant-shell {
+    grid-template-columns: 1fr; }
+    .assistant-shell .evidence-rail {
+      width: 100%; } }
+
+@media (max-width: 600px) {
+  .assistant-shell .conversation-panel {
+    min-height: 580px; }
+  .assistant-shell .conversation-header,
+  .assistant-shell .conversation-scroll {
+    padding-right: 16px;
+    padding-left: 16px; }
+  .assistant-shell .assistant-composer-row {
+    flex-wrap: wrap; }
+    .assistant-shell .assistant-composer-row .form-control {
+      width: 100%;
+      flex-basis: 100%; }
+  .assistant-shell .message {
+    max-width: 94%; } }
+
 .logo {
   width: 200px; }
 

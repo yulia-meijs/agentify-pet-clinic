@@ -613,6 +613,37 @@
         activity: "matches found",
         tone: "success"
       },
+      visits: {
+        label: "Recorded visits",
+        question: "What recorded visits has Samantha had?",
+        title: "Samantha’s recorded visits",
+        summary: "Two recorded visits were found in PetClinic.",
+        visits: [
+          { date: "2013-01-01", description: "rabies shot" },
+          { date: "2013-01-04", description: "spayed" }
+        ],
+        turns: [
+          {
+            question: "Find owner Coleman",
+            title: "Jean Coleman",
+            summary: "Two pets were found in PetClinic.",
+            pets: [{ name: "Max", type: "cat" }, { name: "Samantha", type: "cat" }],
+            activity: "matches found"
+          },
+          {
+            question: "What recorded visits has Samantha had?",
+            title: "Samantha’s recorded visits",
+            summary: "Two recorded visits were found in PetClinic.",
+            visits: [
+              { date: "2013-01-01", description: "rabies shot" },
+              { date: "2013-01-04", description: "spayed" }
+            ],
+            activity: "matches found"
+          }
+        ],
+        activity: "matches found",
+        tone: "success"
+      },
       ambiguous: {
         label: "Needs clarification",
         question: "Find owner Davis",
@@ -676,6 +707,9 @@
              <p class="muted">${state.summary}</p>
              <div class="candidate-list">${state.candidates.map(candidate => `<article class="candidate"><div class="candidate-heading"><strong>${candidate.name}</strong><span class="tiny muted">${candidate.pets}</span></div></article>`).join("")}</div>`;
       }
+      if (state.visits) {
+        return `<div class="inline-records">${state.visits.map(visit => `<div class="inline-record"><strong>${visit.date}</strong><br><span class="tiny muted">${visit.description}</span></div>`).join("")}</div>`;
+      }
       return `<div class="owner-heading"><h3 class="owner-name">${state.title}</h3><span class="record-badge">${state.activity}</span></div><p class="muted">${state.summary}</p>`;
     };
 
@@ -683,10 +717,11 @@
       ? `<div class="trace-entry"><div class="trace-name mono">find_owners_by_last_name</div><div class="trace-outcome ${state.activity === "unsupported" ? "unsupported" : ""}">${state.activity}</div></div>`
       : `<div class="activity-strip"><div class="tool-line">${icon("tool")}<span class="mono">find_owners_by_last_name</span><span>·</span><strong>${state.activity}</strong></div></div>`;
 
-    const composer = (id, value) => `
+    const composer = (id, value, showReset = false) => `
       <form class="composer prototype-form" data-input="${id}">
         <input class="question-input" id="${id}" value="${value}" aria-label="Ask the Clinic Assistant">
         <button class="primary-button" type="submit">Ask assistant</button>
+        ${showReset ? '<button class="prompt-chip" type="button" data-reset>Reset</button>' : ''}
       </form>`;
 
     const variantA = (state) => `
@@ -701,16 +736,16 @@
             <h2>What I can help with</h2>
             <ul class="scope-list">
               <li>Find owners by last-name prefix</li>
-              <li>Show owner names and pet name/type</li>
+              <li>Show owner names, pets, and recorded visits</li>
               <li>Clarify when multiple owners match</li>
             </ul>
             <h2>Outside this assistant</h2>
             <ul class="scope-list excluded">
               <li>Changing or scheduling records</li>
               <li>Medical diagnosis or treatment</li>
-              <li>Addresses, phone numbers, or visits</li>
+              <li>Addresses, phone numbers, or medical advice</li>
             </ul>
-            <div class="privacy-note"><strong>Single turn.</strong><br>This assistant does not remember previous questions.</div>
+            <div class="privacy-note"><strong>Up to 6 questions.</strong><br>Conversation stays in this tab and clears on refresh or Reset.</div>
           </aside>
           <section class="answer-workspace">
             <div class="workspace-top">
@@ -740,22 +775,23 @@
             <header class="conversation-header">
               <div class="assistant-identity">
                 <span class="assistant-avatar">${icon("pet")}</span>
-                <div><h1>PetClinic helper</h1><span class="tiny muted">Here to help find owners and their pets</span></div>
+                <div><h1>PetClinic helper</h1><span class="tiny muted">Here to help with owners, pets, and recorded visits</span></div>
               </div>
             </header>
             <div class="conversation-scroll">
-              <div class="friendly-intro"><strong>Hi there!</strong> Ask me for an owner by last name and I’ll look up their pets for you. 🐾</div>
-              <div class="message-row user"><div class="message"><div class="message-label">You</div>${state.question}</div></div>
-              <div class="message-row assistant"><div class="message">
-                <div class="message-label">PetClinic helper</div>
-                <strong>${state.title}</strong>
-                <p class="muted">${state.summary}</p>
-                ${stateResultContent(state, true)}
-              </div></div>
+              <div class="friendly-intro"><strong>Hi there!</strong> Ask about an owner, their pets, or a recorded visit. Follow-up questions stay in this tab. 🐾</div>
+              ${(state.turns || [state]).map(turn => `
+                <div class="message-row user"><div class="message"><div class="message-label">You</div>${turn.question}</div></div>
+                <div class="message-row assistant"><div class="message">
+                  <div class="message-label">PetClinic helper</div>
+                  <strong>${turn.title}</strong>
+                  <p class="muted">${turn.summary}</p>
+                  ${stateResultContent(turn, true)}
+                </div></div>`).join("")}
             </div>
             <div class="conversation-composer">
-              ${composer("questionB", state.question)}
-              <div class="scope-inline">One question at a time · Owner last-name lookup only · Nothing is changed or saved</div>
+              ${composer("questionB", "", true)}
+              <div class="scope-inline">${(state.turns || [state]).length} of 6 questions · Conversation stays in this tab · Nothing is changed or saved</div>
             </div>
           </section>
           <aside class="evidence-rail">
@@ -777,6 +813,7 @@
               <div class="quick-prompts">
                 <button class="prompt-chip" type="button" data-state="known">Owner Franklin</button>
                 <button class="prompt-chip" type="button" data-state="ambiguous">Owner Davis</button>
+                <button class="prompt-chip" type="button" data-state="visits">Samantha’s visits</button>
               </div>
             </section>
           </aside>
@@ -788,7 +825,7 @@
         <section class="compare-intro">
           <p class="eyebrow">Human decision aid</p>
           <h1>Choose the interaction hierarchy.</h1>
-          <p class="lede">Both concepts honor the same read-only, single-turn contract. Compare how quickly staff can understand an answer, its source, and the assistant’s limits.</p>
+          <p class="lede">Both concepts honor the same read-only, six-turn browser-tab contract. Compare how quickly staff can understand an answer, its source, and the assistant’s limits.</p>
         </section>
         <div class="comparison-grid">
           <article class="comparison-card">
@@ -804,7 +841,7 @@
             <h2>Friendly PetClinic helper</h2>
             <p class="muted">A warmer chat flow with simple lookup details beside it.</p>
             <div class="comparison-preview"><div class="mini-layout-b"><div class="mini-panel mini-stack"><div class="mini-line accent"></div><div class="mini-bubble user"></div><div class="mini-bubble"></div><div class="mini-line"></div></div><div class="mini-panel mini-stack"><div class="mini-line accent"></div><div class="mini-line"></div><div class="mini-line short"></div></div></div></div>
-            <ul class="tradeoffs"><li>Friendly, familiar PetClinic interaction</li><li>Lookup details stay visible without feeling technical</li><li>Single-turn boundary remains explicit</li></ul>
+            <ul class="tradeoffs"><li>Friendly, familiar PetClinic interaction</li><li>Lookup details stay visible without feeling technical</li><li>Six-turn tab-local boundary remains explicit</li></ul>
             <div class="compare-actions"><button class="compare-button primary" type="button" data-variant="B">Open concept B</button></div>
           </article>
         </div>
@@ -816,7 +853,7 @@
               <tr><td>Can staff scan the result quickly?</td><td>Strong structured hierarchy</td><td>Natural reading flow</td></tr>
               <tr><td>Are capability limits obvious?</td><td>Persistent scope panel</td><td>Compact boundary rail</td></tr>
               <tr><td>Is grounding inspectable?</td><td>Inline activity strip</td><td>Dedicated evidence rail</td></tr>
-              <tr><td>Does it avoid implying memory?</td><td>Strong</td><td>Needs explicit messaging</td></tr>
+              <tr><td>Is conversation lifetime clear?</td><td>Scope panel explains it</td><td>Composer shows the tab-local turn count</td></tr>
               <tr><td>Mobile fit</td><td>Answer first, scope follows</td><td>Chat first, evidence follows</td></tr>
             </tbody>
           </table>
@@ -854,6 +891,7 @@
       if (question.match(/\b(change|delete|update|add|schedule)\b/)) return "mutation";
       if (question.match(/\b(medicine|sick|diagnos|treat|dose)\b/)) return "medical";
       if (question.includes("davis")) return "ambiguous";
+      if (question.includes("visit") || question.includes("history")) return "visits";
       if (question.includes("missing") || question.includes("unknown")) return "absent";
       return "known";
     };
@@ -864,6 +902,9 @@
       });
       document.querySelectorAll("[data-variant]").forEach(button => {
         button.addEventListener("click", () => selectVariant(button.dataset.variant));
+      });
+      document.querySelectorAll("[data-reset]").forEach(button => {
+        button.addEventListener("click", () => selectState("known"));
       });
       document.querySelectorAll(".prototype-form").forEach(form => {
         form.addEventListener("submit", event => {

@@ -5,8 +5,8 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=lib/workshop-azure.sh
 source "$root/scripts/lib/workshop-azure.sh"
 
-readonly PREFLIGHT_COMMAND_VERSION='1.0.0'
-readonly PREFLIGHT_EVIDENCE_SCHEMA_VERSION='1.0'
+readonly PREFLIGHT_COMMAND_VERSION='1.1.0'
+readonly PREFLIGHT_EVIDENCE_SCHEMA_VERSION='1.1'
 
 evidence_dir="${WORKSHOP_AZURE_EVIDENCE_DIR:-$root/.workshop-evidence}"
 cleanup_deadline="${WORKSHOP_AZURE_CLEANUP_DEADLINE-}"
@@ -77,7 +77,8 @@ collect_evidence_metadata() {
 
 write_evidence() {
   local outcome="$1"
-  local region="$AZURE_LOCATION"
+  local app_service_location="$AZURE_LOCATION"
+  local foundry_location="$AZURE_OPENAI_LOCATION"
   local model_name="$AZURE_OPENAI_MODEL"
   local version="$AZURE_OPENAI_MODEL_VERSION"
   local deployment_name="$AZURE_OPENAI_DEPLOYMENT"
@@ -90,7 +91,7 @@ write_evidence() {
   evidence_file="$evidence_dir/preflight-$timestamp.md"
   pending_evidence_file="$evidence_file.tmp.$$"
   if [[ "$outcome" == 'PASSED' ]]; then
-    region="$location"
+    app_service_location="$location"
     model_name="$model"
     version="$model_version"
     deployment_name="$deployment"
@@ -115,7 +116,8 @@ write_evidence() {
 - UTC: \`$deployed_time\`
 - Git revision: \`$revision\`
 - Subscription: \`$(redact_subscription "$subscription_id")\`
-- Region: \`$region\`
+- App Service location: \`$app_service_location\`
+- Foundry location: \`$foundry_location\`
 - Model: \`$model_name\`
 - Model version: \`$version\`
 - Deployment: \`$deployment_name\`
@@ -129,7 +131,7 @@ EOF
 - Managed identity: \`present (SystemAssigned)\`
 - Role: \`Foundry User\`
 - Role scope category: \`Foundry resource\`
-- Required app settings: \`AZURE_OPENAI_ENDPOINT\`, \`AZURE_OPENAI_MICROSOFT_FOUNDRY\`, \`AZURE_OPENAI_DEPLOYMENT\`, \`AZURE_OPENAI_MODEL\`, \`JAVA_OPTS\`, \`WEBSITES_PORT\`
+- Required app settings: \`AZURE_OPENAI_ENDPOINT\`, \`AZURE_OPENAI_MICROSOFT_FOUNDRY\`, \`AZURE_OPENAI_DEPLOYMENT\`, \`AZURE_OPENAI_MODEL\`, \`JAVA_OPTS\`, \`WEBSITES_PORT\`, \`SPRING_AI_MODEL_CHAT\`
 - Application health: \`UP\`
 - Deployed time: \`$deployed_time\`
 EOF
@@ -257,7 +259,11 @@ begin_gate 'Resource topology' \
 resources_json="$(
   az resource list --resource-group "$resource_group" --output json 2>/dev/null
 )" || verification_fail 'Resource topology' 'could not list deployed resources'
-resource_evidence="$(jq -er '["microsoft.cognitiveservices/accounts","microsoft.web/serverfarms","microsoft.web/sites"] as $requiredTypes | [.[]? | {type, normalizedType: (.type | ascii_downcase), state: (.provisioningState // empty)}] as $resources | [$resources[] | select(.normalizedType as $type | $requiredTypes | index($type))] as $required | [$resources[] | select(.normalizedType as $type | ($requiredTypes + ["microsoft.insights/diagnosticsettings"]) | index($type) | not)] as $unexpected | ($required | length) == 3 and ($required | map(.normalizedType) | sort) == ($requiredTypes | sort) and all($required[]; .state == "Succeeded") and ($unexpected | length) == 0 | if . then $required | sort_by(.normalizedType) | map("- Resource: `\(.type)`; provisioningState: `\(.state)`") | join("\n") else error("invalid resource provisioning evidence") end' <<<"$resources_json" 2>/dev/null)" ||
+resource_evidence="$(jq -er \
+  --arg appLocation "$AZURE_LOCATION" \
+  --arg openAiLocation "$AZURE_OPENAI_LOCATION" \
+  '["microsoft.cognitiveservices/accounts","microsoft.web/serverfarms","microsoft.web/sites"] as $requiredTypes | [.[]? | {type, normalizedType: (.type | ascii_downcase), location: (.location | ascii_downcase), state: (.provisioningState // empty)}] as $resources | [$resources[] | select(.normalizedType as $type | $requiredTypes | index($type))] as $required | [$resources[] | select(.normalizedType as $type | ($requiredTypes + ["microsoft.insights/diagnosticsettings"]) | index($type) | not)] as $unexpected | ($required | length) == 3 and ($required | map(.normalizedType) | sort) == ($requiredTypes | sort) and all($required[]; .state == "Succeeded") and all($required[]; if .normalizedType == "microsoft.cognitiveservices/accounts" then .location == ($openAiLocation | ascii_downcase) else .location == ($appLocation | ascii_downcase) end) and ($unexpected | length) == 0 | if . then $required | sort_by(.normalizedType) | map("- Resource: `\(.type)`; location: `\(.location)`; provisioningState: `\(.state)`") | join("\n") else error("invalid resource provisioning evidence") end' \
+  <<<"$resources_json" 2>/dev/null)" ||
   verification_fail 'Resource topology' \
     'deployed resources are missing, unexpected, or not successfully provisioned'
 pass_gate 'Resource topology'
@@ -292,6 +298,7 @@ identity_json="$(
 principal_id="$(jq -er 'select(.type == "SystemAssigned") | .principalId | select(type == "string" and length > 0)' <<<"$identity_json" 2>/dev/null)" ||
   verification_fail 'Managed identity' \
     'web app system-assigned managed identity is missing'
+principal_id="${principal_id//$'\r'/}"
 pass_gate 'Managed identity'
 
 begin_gate 'Foundry User assignment' \
@@ -304,12 +311,13 @@ foundry_scope="$(
     --output tsv 2>/dev/null
 )" || verification_fail 'Foundry User assignment' \
   'could not inspect the Foundry resource scope'
+foundry_scope="${foundry_scope//$'\r'/}"
 [[ -n "$foundry_scope" ]] ||
   verification_fail 'Foundry User assignment' 'Foundry resource scope must be set'
 
 roles_json="$(
-  az role assignment list \
-    --assignee-object-id "$principal_id" \
+  MSYS_NO_PATHCONV=1 az role assignment list \
+    --assignee "$principal_id" \
     --scope "$foundry_scope" \
     --output json 2>/dev/null
 )" || verification_fail 'Foundry User assignment' \
@@ -348,6 +356,7 @@ require_app_setting AZURE_OPENAI_DEPLOYMENT "$deployment"
 require_app_setting AZURE_OPENAI_MODEL "$model"
 require_app_setting JAVA_OPTS '-Xms256m -Xmx1024m'
 require_app_setting WEBSITES_PORT 8080
+require_app_setting SPRING_AI_MODEL_CHAT openai
 pass_gate 'Required app settings'
 
 revision="$(git -C "$root" rev-parse HEAD 2>/dev/null)" ||

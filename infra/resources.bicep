@@ -1,5 +1,6 @@
 param environmentName string
-param location string
+param appServiceLocation string
+param openAiLocation string
 param modelName string
 param modelVersion string
 param modelDeploymentName string
@@ -18,7 +19,7 @@ var foundryUserRoleDefinitionId = subscriptionResourceId(
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   name: appServicePlanName
-  location: location
+  location: appServiceLocation
   kind: 'linux'
   tags: tags
   sku: {
@@ -35,7 +36,7 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
 
 resource foundry 'Microsoft.CognitiveServices/accounts@2025-06-01' = {
   name: foundryName
-  location: location
+  location: openAiLocation
   kind: 'AIServices'
   tags: tags
   sku: {
@@ -68,7 +69,7 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2025-
 
 resource web 'Microsoft.Web/sites@2024-11-01' = {
   name: webAppName
-  location: location
+  location: appServiceLocation
   kind: 'app,linux'
   tags: union(tags, {
     'azd-service-name': 'web'
@@ -101,6 +102,10 @@ resource web 'Microsoft.Web/sites@2024-11-01' = {
         {
           name: 'AZURE_OPENAI_MODEL'
           value: modelName
+        }
+        {
+          name: 'SPRING_AI_MODEL_CHAT'
+          value: 'openai'
         }
         {
           name: 'JAVA_OPTS'
