@@ -322,10 +322,31 @@
 
     /* Variant B: compact conversation with a persistent evidence rail. */
     .variant-b .main { max-width: 1260px; }
+    body.variant-b-active .nav-link.active {
+      background: var(--cp-surface-soft);
+      color: var(--cp-text);
+    }
+    body.variant-b-active .status-dot { background: var(--cp-success); }
     .chat-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.75fr); gap: 20px; }
     .conversation-panel, .evidence-rail { border-radius: 16px; }
     .conversation-panel { min-height: 650px; display: flex; flex-direction: column; overflow: hidden; }
-    .conversation-header { padding: 20px 24px; border-bottom: 1px solid var(--cp-border); }
+    .conversation-header {
+      position: relative;
+      overflow: hidden;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+    }
+    .conversation-header::after {
+      position: absolute;
+      right: 22px;
+      bottom: -8px;
+      content: "•  •  •";
+      color: var(--cp-border);
+      font-size: 28px;
+      letter-spacing: 8px;
+      transform: rotate(-12deg);
+    }
     .assistant-identity { display: flex; align-items: center; gap: 12px; }
     .assistant-avatar {
       display: inline-flex;
@@ -334,10 +355,24 @@
       width: 42px;
       height: 42px;
       border-radius: 16px;
-      background: var(--cp-accent);
-      color: var(--cp-accent-fg);
+      border: 1px solid var(--cp-border);
+      background: var(--cp-surface-soft);
+      color: var(--cp-success);
     }
     .assistant-identity h1 { margin: 0 0 2px; font-size: 19px; letter-spacing: -0.02em; }
+    .friendly-intro {
+      max-width: 560px;
+      margin: 0 auto 26px;
+      padding: 14px 16px;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface);
+      color: var(--cp-text-muted);
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .friendly-intro strong { color: var(--cp-text); }
     .conversation-scroll { flex: 1; padding: 28px 24px; background: var(--cp-bg-elevated); }
     .message-row { display: flex; margin-bottom: 18px; }
     .message-row.user { justify-content: flex-end; }
@@ -349,9 +384,13 @@
       background: var(--cp-surface);
       line-height: 1.55;
     }
-    .message-row.user .message { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+    .message-row.user .message {
+      border-color: var(--cp-border-strong);
+      background: var(--cp-surface-soft);
+      color: var(--cp-text);
+    }
     .message-label { margin-bottom: 6px; color: var(--cp-text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
-    .message-row.user .message-label { color: var(--cp-accent-fg); }
+    .message-row.user .message-label { color: var(--cp-text-muted); }
     .inline-records { display: grid; gap: 8px; margin-top: 14px; }
     .inline-record {
       padding: 10px 12px;
@@ -361,8 +400,28 @@
     }
     .conversation-composer { padding: 18px 20px; border-top: 1px solid var(--cp-border); background: var(--cp-surface); }
     .conversation-composer .composer { margin-top: 0; }
+    .variant-b .primary-button {
+      border-color: var(--cp-text);
+      background: var(--cp-text);
+      color: var(--cp-bg-elevated);
+    }
+    .variant-b .primary-button:hover {
+      border-color: var(--cp-text-muted);
+      background: var(--cp-text-muted);
+    }
     .scope-inline { margin-top: 10px; color: var(--cp-text-muted); font-size: 11px; }
-    .evidence-rail { align-self: start; overflow: hidden; }
+    .evidence-rail {
+      position: relative;
+      align-self: start;
+      overflow: hidden;
+      box-shadow: none;
+    }
+    .evidence-rail::before {
+      display: block;
+      height: 5px;
+      content: "";
+      background: var(--cp-success);
+    }
     .rail-section { padding: 20px; border-bottom: 1px solid var(--cp-border); }
     .rail-section:last-child { border-bottom: 0; }
     .rail-section h2 { margin-bottom: 14px; font-size: 15px; }
@@ -371,6 +430,12 @@
       border: 1px solid var(--cp-border);
       border-radius: 0.625rem;
       background: var(--cp-surface-soft);
+    }
+    .rail-kicker {
+      margin-bottom: 6px;
+      color: var(--cp-success);
+      font-size: 12px;
+      font-weight: 750;
     }
     .trace-name { margin-bottom: 6px; color: var(--cp-text); font-size: 12px; }
     .trace-outcome { color: var(--cp-success); font-size: 12px; font-weight: 750; }
@@ -674,14 +739,15 @@
           <section class="conversation-panel">
             <header class="conversation-header">
               <div class="assistant-identity">
-                <span class="assistant-avatar">${icon("assistant")}</span>
-                <div><h1>Clinic Assistant</h1><span class="tiny muted">Owner lookup · single turn</span></div>
+                <span class="assistant-avatar">${icon("pet")}</span>
+                <div><h1>PetClinic helper</h1><span class="tiny muted">Here to help find owners and their pets</span></div>
               </div>
             </header>
             <div class="conversation-scroll">
+              <div class="friendly-intro"><strong>Hi there!</strong> Ask me for an owner by last name and I’ll look up their pets for you. 🐾</div>
               <div class="message-row user"><div class="message"><div class="message-label">You</div>${state.question}</div></div>
               <div class="message-row assistant"><div class="message">
-                <div class="message-label">Clinic Assistant</div>
+                <div class="message-label">PetClinic helper</div>
                 <strong>${state.title}</strong>
                 <p class="muted">${state.summary}</p>
                 ${stateResultContent(state, true)}
@@ -689,25 +755,25 @@
             </div>
             <div class="conversation-composer">
               ${composer("questionB", state.question)}
-              <div class="scope-inline">Only owner last-name lookup is supported. No conversation history is stored.</div>
+              <div class="scope-inline">One question at a time · Owner last-name lookup only · Nothing is changed or saved</div>
             </div>
           </section>
           <aside class="evidence-rail">
             <section class="rail-section">
-              <p class="eyebrow">Evidence</p>
-              <h2>Activity trace</h2>
+              <p class="rail-kicker">About this answer</p>
+              <h2>PetClinic lookup</h2>
               ${activity(state, true)}
             </section>
             <section class="rail-section">
-              <h2>Answer boundary</h2>
+              <h2>Good to know</h2>
               <div class="boundary-grid">
-                <div class="boundary"><span class="boundary-icon">✓</span><span><strong>Grounded</strong><br>Retrieved PetClinic records only</span></div>
-                <div class="boundary"><span class="boundary-icon">✓</span><span><strong>Read-only</strong><br>No records can be changed</span></div>
-                <div class="boundary"><span class="boundary-icon no">—</span><span><strong>No medical advice</strong><br>Diagnosis and treatment excluded</span></div>
+                <div class="boundary"><span class="boundary-icon">✓</span><span><strong>From clinic records</strong><br>Only retrieved PetClinic details</span></div>
+                <div class="boundary"><span class="boundary-icon">✓</span><span><strong>Safe and read-only</strong><br>Nothing can be changed here</span></div>
+                <div class="boundary"><span class="boundary-icon no">—</span><span><strong>Ask your veterinarian</strong><br>No diagnosis or treatment advice</span></div>
               </div>
             </section>
             <section class="rail-section">
-              <h2>Example questions</h2>
+              <h2>Try an example</h2>
               <div class="quick-prompts">
                 <button class="prompt-chip" type="button" data-state="known">Owner Franklin</button>
                 <button class="prompt-chip" type="button" data-state="ambiguous">Owner Davis</button>
@@ -735,10 +801,10 @@
           </article>
           <article class="comparison-card">
             <p class="eyebrow">Concept B</p>
-            <h2>Conversation + evidence rail</h2>
-            <p class="muted">Familiar chat flow with trust details separated beside it.</p>
+            <h2>Friendly PetClinic helper</h2>
+            <p class="muted">A warmer chat flow with simple lookup details beside it.</p>
             <div class="comparison-preview"><div class="mini-layout-b"><div class="mini-panel mini-stack"><div class="mini-line accent"></div><div class="mini-bubble user"></div><div class="mini-bubble"></div><div class="mini-line"></div></div><div class="mini-panel mini-stack"><div class="mini-line accent"></div><div class="mini-line"></div><div class="mini-line short"></div></div></div></div>
-            <ul class="tradeoffs"><li>Most familiar “assistant” interaction</li><li>Activity evidence is always visible</li><li>Can imply multi-turn memory unless copy stays explicit</li></ul>
+            <ul class="tradeoffs"><li>Friendly, familiar PetClinic interaction</li><li>Lookup details stay visible without feeling technical</li><li>Single-turn boundary remains explicit</li></ul>
             <div class="compare-actions"><button class="compare-button primary" type="button" data-variant="B">Open concept B</button></div>
           </article>
         </div>
@@ -809,6 +875,7 @@
 
     const render = () => {
       renderScenarios();
+      document.body.classList.toggle("variant-b-active", currentVariant === "B");
       const state = states[currentState];
       document.getElementById("prototypeRoot").innerHTML =
         currentVariant === "A" ? variantA(state) : currentVariant === "B" ? variantB(state) : comparison();
