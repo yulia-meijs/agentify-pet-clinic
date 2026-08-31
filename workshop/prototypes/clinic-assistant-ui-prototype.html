@@ -1,0 +1,842 @@
+<!doctype html>
+<!-- PROTOTYPE ONLY: Two Clinic Assistant UI concepts, switchable via ?variant=A|B|compare. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clinic Assistant UI Prototype</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding-bottom: 92px;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, a:focus-visible {
+      outline: 3px solid var(--cp-accent);
+      outline-offset: 2px;
+    }
+    svg { width: 20px; height: 20px; }
+
+    .app-header {
+      min-height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 32px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+    }
+    .brand, .brand-mark, .header-actions, .nav-links, .status, .scenario-controls,
+    .prototype-switcher, .switcher-nav, .quick-prompts, .composer, .tool-line,
+    .owner-heading, .pet-list, .candidate-heading, .compare-actions {
+      display: flex;
+      align-items: center;
+    }
+    .brand { gap: 12px; font-weight: 700; letter-spacing: -0.02em; }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      justify-content: center;
+      border-radius: 0.625rem;
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+    }
+    .nav-links { gap: 4px; }
+    .nav-link {
+      padding: 10px 12px;
+      border-radius: 0.625rem;
+      color: var(--cp-text-muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .nav-link.active { background: var(--cp-accent-soft); color: var(--cp-accent); }
+    .header-actions { gap: 12px; }
+    .status { gap: 8px; color: var(--cp-text-muted); font-size: 13px; }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cp-success);
+    }
+    .icon-button, .switch-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      cursor: pointer;
+    }
+    .icon-button { width: 40px; height: 40px; }
+
+    .prototype-banner {
+      padding: 8px 24px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-accent-soft);
+      color: var(--cp-accent);
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .scenario-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 32px;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-bg-elevated);
+    }
+    .scenario-title { font-size: 13px; color: var(--cp-text-muted); font-weight: 700; }
+    .scenario-controls { gap: 8px; flex-wrap: wrap; }
+    .scenario-button, .prompt-chip, .secondary-button, .primary-button, .compare-button {
+      border-radius: 0.625rem;
+      cursor: pointer;
+      font-weight: 650;
+    }
+    .scenario-button {
+      padding: 7px 10px;
+      border: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+    .scenario-button.active {
+      border-color: var(--cp-accent);
+      background: var(--cp-accent-soft);
+      color: var(--cp-accent);
+    }
+
+    .main { max-width: 1440px; margin: 0 auto; padding: 32px; }
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--cp-accent);
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 8px; font-size: clamp(28px, 4vw, 46px); letter-spacing: -0.04em; line-height: 1.05; }
+    h2 { letter-spacing: -0.025em; }
+    .lede { max-width: 680px; color: var(--cp-text-muted); line-height: 1.6; }
+    .muted { color: var(--cp-text-muted); }
+    .tiny { font-size: 12px; }
+    .mono { font-family: Consolas, "Courier New", Courier, monospace; }
+    .hidden { display: none !important; }
+
+    /* Variant A: a focused care-desk workspace with answer-first hierarchy. */
+    .variant-a .hero { margin-bottom: 24px; }
+    .desk-layout { display: grid; grid-template-columns: minmax(230px, 0.72fr) minmax(0, 2.2fr); gap: 24px; }
+    .scope-panel, .answer-workspace, .conversation-panel, .evidence-rail, .comparison-card {
+      border: 1px solid var(--cp-border);
+      background: var(--cp-surface);
+      box-shadow: var(--cp-shadow);
+    }
+    .scope-panel { padding: 24px; border-radius: 16px; align-self: start; }
+    .scope-panel h2 { font-size: 17px; }
+    .scope-list { margin: 20px 0 28px; padding: 0; list-style: none; }
+    .scope-list li {
+      position: relative;
+      margin: 0 0 14px;
+      padding-left: 24px;
+      color: var(--cp-text-muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .scope-list li::before {
+      position: absolute;
+      left: 0;
+      content: "✓";
+      color: var(--cp-success);
+      font-weight: 800;
+    }
+    .scope-list.excluded li::before { content: "—"; color: var(--cp-text-soft); }
+    .privacy-note {
+      padding: 14px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .answer-workspace { min-height: 560px; overflow: hidden; border-radius: 16px; }
+    .workspace-top { padding: 24px 28px 20px; border-bottom: 1px solid var(--cp-border); }
+    .workspace-top h2 { margin-bottom: 6px; font-size: 20px; }
+    .quick-prompts { gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    .prompt-chip {
+      padding: 8px 11px;
+      border: 1px solid var(--cp-border);
+      background: var(--cp-bg-elevated);
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+    .answer-body { padding: 28px; }
+    .answer-label { margin-bottom: 12px; color: var(--cp-text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .result-card {
+      padding: 22px;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-bg-elevated);
+    }
+    .result-card.warning { border-color: var(--cp-warning); }
+    .result-card.unsupported { border-color: var(--cp-danger); }
+    .owner-heading { justify-content: space-between; gap: 16px; }
+    .owner-name { margin: 0; font-size: 24px; }
+    .record-badge, .outcome-badge {
+      padding: 5px 9px;
+      border-radius: 0.625rem;
+      background: var(--cp-accent-soft);
+      color: var(--cp-accent);
+      font-size: 11px;
+      font-weight: 750;
+      text-transform: uppercase;
+    }
+    .pet-list { gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+    .pet-card {
+      min-width: 154px;
+      padding: 15px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+    }
+    .pet-icon {
+      display: inline-flex;
+      padding: 7px;
+      border-radius: 0.625rem;
+      background: var(--cp-accent-soft);
+      color: var(--cp-accent);
+    }
+    .pet-name { margin: 10px 0 2px; font-weight: 750; }
+    .candidate-list { display: grid; gap: 10px; margin-top: 18px; }
+    .candidate {
+      padding: 14px 16px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+    }
+    .candidate-heading { justify-content: space-between; gap: 12px; }
+    .candidate-heading strong { font-size: 15px; }
+    .activity-strip {
+      margin-top: 18px;
+      padding: 12px 14px;
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+    .tool-line { gap: 8px; }
+    .tool-line svg { width: 15px; height: 15px; color: var(--cp-accent); }
+    .composer { gap: 10px; margin-top: 22px; }
+    .question-input {
+      min-width: 0;
+      flex: 1;
+      height: 48px;
+      padding: 0 15px;
+      border: 1px solid var(--cp-border-strong);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      color: var(--cp-text);
+    }
+    .primary-button {
+      height: 48px;
+      padding: 0 20px;
+      border: 1px solid var(--cp-accent);
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+    }
+    .primary-button:hover { background: var(--cp-accent-hover); }
+
+    /* Variant B: compact conversation with a persistent evidence rail. */
+    .variant-b .main { max-width: 1260px; }
+    .chat-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 0.75fr); gap: 20px; }
+    .conversation-panel, .evidence-rail { border-radius: 16px; }
+    .conversation-panel { min-height: 650px; display: flex; flex-direction: column; overflow: hidden; }
+    .conversation-header { padding: 20px 24px; border-bottom: 1px solid var(--cp-border); }
+    .assistant-identity { display: flex; align-items: center; gap: 12px; }
+    .assistant-avatar {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 16px;
+      background: var(--cp-accent);
+      color: var(--cp-accent-fg);
+    }
+    .assistant-identity h1 { margin: 0 0 2px; font-size: 19px; letter-spacing: -0.02em; }
+    .conversation-scroll { flex: 1; padding: 28px 24px; background: var(--cp-bg-elevated); }
+    .message-row { display: flex; margin-bottom: 18px; }
+    .message-row.user { justify-content: flex-end; }
+    .message {
+      max-width: min(620px, 86%);
+      padding: 15px 17px;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface);
+      line-height: 1.55;
+    }
+    .message-row.user .message { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+    .message-label { margin-bottom: 6px; color: var(--cp-text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .message-row.user .message-label { color: var(--cp-accent-fg); }
+    .inline-records { display: grid; gap: 8px; margin-top: 14px; }
+    .inline-record {
+      padding: 10px 12px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+    }
+    .conversation-composer { padding: 18px 20px; border-top: 1px solid var(--cp-border); background: var(--cp-surface); }
+    .conversation-composer .composer { margin-top: 0; }
+    .scope-inline { margin-top: 10px; color: var(--cp-text-muted); font-size: 11px; }
+    .evidence-rail { align-self: start; overflow: hidden; }
+    .rail-section { padding: 20px; border-bottom: 1px solid var(--cp-border); }
+    .rail-section:last-child { border-bottom: 0; }
+    .rail-section h2 { margin-bottom: 14px; font-size: 15px; }
+    .trace-entry {
+      padding: 12px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface-soft);
+    }
+    .trace-name { margin-bottom: 6px; color: var(--cp-text); font-size: 12px; }
+    .trace-outcome { color: var(--cp-success); font-size: 12px; font-weight: 750; }
+    .trace-outcome.unsupported { color: var(--cp-danger); }
+    .boundary-grid { display: grid; gap: 9px; }
+    .boundary {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 8px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .boundary strong { color: var(--cp-text); }
+    .boundary-icon { color: var(--cp-success); }
+    .boundary-icon.no { color: var(--cp-text-soft); }
+
+    /* Comparison is a decision aid, not a third design concept. */
+    .compare-intro { max-width: 760px; margin-bottom: 28px; }
+    .comparison-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+    .comparison-card { padding: 24px; border-radius: 16px; }
+    .comparison-card h2 { margin-bottom: 6px; }
+    .comparison-preview {
+      min-height: 230px;
+      margin: 20px 0;
+      padding: 16px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-bg-elevated);
+    }
+    .mini-layout-a { display: grid; grid-template-columns: 0.55fr 1.45fr; gap: 10px; height: 198px; }
+    .mini-layout-b { display: grid; grid-template-columns: 1.4fr 0.6fr; gap: 10px; height: 198px; }
+    .mini-panel { border: 1px solid var(--cp-border); border-radius: 0.625rem; background: var(--cp-surface); }
+    .mini-stack { display: grid; gap: 8px; padding: 10px; }
+    .mini-line { height: 10px; border-radius: 0.625rem; background: var(--cp-border); }
+    .mini-line.accent { width: 54%; background: var(--cp-accent); }
+    .mini-line.short { width: 68%; }
+    .mini-bubble { width: 74%; height: 42px; border-radius: 16px; background: var(--cp-accent-soft); }
+    .mini-bubble.user { margin-left: auto; width: 62%; background: var(--cp-accent); }
+    .tradeoffs { margin: 0; padding-left: 20px; color: var(--cp-text-muted); line-height: 1.6; }
+    .compare-actions { gap: 10px; margin-top: 20px; }
+    .compare-button, .secondary-button {
+      padding: 10px 14px;
+      border: 1px solid var(--cp-border-strong);
+      background: var(--cp-surface);
+      color: var(--cp-text);
+    }
+    .compare-button.primary { border-color: var(--cp-accent); background: var(--cp-accent); color: var(--cp-accent-fg); }
+    .rubric { margin-top: 28px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; border: 1px solid var(--cp-border); background: var(--cp-surface); }
+    th, td { padding: 14px 16px; border-bottom: 1px solid var(--cp-border); text-align: left; font-size: 13px; }
+    th { background: var(--cp-surface-soft); color: var(--cp-text-muted); }
+    td:first-child { font-weight: 700; }
+
+    .prototype-switcher {
+      position: fixed;
+      z-index: 20;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      min-width: min(520px, calc(100vw - 24px));
+      justify-content: space-between;
+      gap: 16px;
+      padding: 9px 12px;
+      border: 1px solid var(--cp-border-strong);
+      border-radius: 16px;
+      background: var(--cp-panel-strong);
+      box-shadow: var(--cp-shadow);
+    }
+    .switcher-copy { min-width: 0; text-align: center; }
+    .switcher-copy strong { display: block; font-size: 13px; }
+    .switcher-copy span { color: var(--cp-text-muted); font-size: 11px; }
+    .switcher-nav { gap: 6px; }
+    .switch-button { width: 38px; height: 38px; }
+
+    @media (max-width: 900px) {
+      .app-header { padding: 12px 18px; }
+      .nav-links { display: none; }
+      .scenario-bar { align-items: flex-start; flex-direction: column; padding: 12px 18px; }
+      .main { padding: 24px 18px; }
+      .desk-layout, .chat-layout { grid-template-columns: 1fr; }
+      .scope-panel { order: 2; }
+      .evidence-rail { width: 100%; }
+      .comparison-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      body { padding-bottom: 110px; }
+      .app-header { min-height: 60px; }
+      .status { display: none; }
+      .brand span:last-child { font-size: 14px; }
+      .prototype-banner { padding-inline: 12px; font-size: 10px; }
+      .scenario-controls { flex-wrap: nowrap; width: 100%; overflow-x: auto; padding-bottom: 4px; }
+      .scenario-button { white-space: nowrap; }
+      .workspace-top, .answer-body, .conversation-scroll { padding: 20px 16px; }
+      .composer { align-items: stretch; flex-direction: column; }
+      .primary-button { width: 100%; }
+      .owner-heading { align-items: flex-start; flex-direction: column; }
+      .pet-card { min-width: 100%; }
+      .conversation-panel { min-height: 600px; }
+      .message { max-width: 94%; }
+      .prototype-switcher { bottom: 12px; }
+      .switcher-copy span { display: none; }
+      th, td { min-width: 132px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M8.5 11.5c-1.2 0-2.2-1-2.2-2.2s1-2.2 2.2-2.2 2.2 1 2.2 2.2-1 2.2-2.2 2.2Z"/>
+          <path d="M15.5 11.5c-1.2 0-2.2-1-2.2-2.2s1-2.2 2.2-2.2 2.2 1 2.2 2.2-1 2.2-2.2 2.2Z"/>
+          <path d="M12 18.7c-3.2 0-5.8-1.4-5.8-3.5 0-1.7 1.5-2.8 3.1-2.8.9 0 1.8.4 2.7 1.3.9-.9 1.8-1.3 2.7-1.3 1.6 0 3.1 1.1 3.1 2.8 0 2.1-2.6 3.5-5.8 3.5Z"/>
+        </svg>
+      </span>
+      <span>Spring PetClinic</span>
+    </div>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a class="nav-link" href="#">Home</a>
+      <a class="nav-link" href="#">Find owners</a>
+      <a class="nav-link" href="#">Veterinarians</a>
+      <a class="nav-link active" href="#">Clinic Assistant</a>
+    </nav>
+    <div class="header-actions">
+      <span class="status"><span class="status-dot"></span>Read-only assistant</span>
+      <button class="icon-button" id="themeToggle" type="button" aria-label="Toggle color theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.5A7 7 0 0 1 13.5 3H12Z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="prototype-banner">Throwaway prototype · no live records · no actions are performed</div>
+
+  <div class="scenario-bar">
+    <span class="scenario-title">Preview response state</span>
+    <div class="scenario-controls" id="scenarioControls" aria-label="Prototype scenarios"></div>
+  </div>
+
+  <div id="prototypeRoot"></div>
+
+  <aside class="prototype-switcher" aria-label="Prototype variant switcher">
+    <div class="switcher-nav">
+      <button class="switch-button" id="previousVariant" type="button" aria-label="Previous variant">←</button>
+    </div>
+    <div class="switcher-copy" aria-live="polite">
+      <strong id="variantLabel"></strong>
+      <span>Use ← → keys outside text inputs</span>
+    </div>
+    <div class="switcher-nav">
+      <button class="switch-button" id="nextVariant" type="button" aria-label="Next variant">→</button>
+    </div>
+  </aside>
+
+  <script>
+    const icon = (name) => {
+      const icons = {
+        pet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.5 11.5a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4ZM15.5 11.5a2.2 2.2 0 1 0 0-4.4 2.2 2.2 0 0 0 0 4.4Z"/><path d="M12 18.7c-3.2 0-5.8-1.4-5.8-3.5 0-1.7 1.5-2.8 3.1-2.8.9 0 1.8.4 2.7 1.3.9-.9 1.8-1.3 2.7-1.3 1.6 0 3.1 1.1 3.1 2.8 0 2.1-2.6 3.5-5.8 3.5Z"/></svg>',
+        tool: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14.7 6.3 3-3a4.8 4.8 0 0 1-6.4 6.4l-6.6 6.6a2.1 2.1 0 1 0 3 3l6.6-6.6a4.8 4.8 0 0 1 6.4-6.4l-3 3-3-3Z"/></svg>',
+        shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>',
+        assistant: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2M20 14h2M9 13v2M15 13v2"/></svg>'
+      };
+      return icons[name];
+    };
+
+    const states = {
+      known: {
+        label: "Known owner",
+        question: "Which pets belong to owner Franklin?",
+        title: "George Franklin",
+        summary: "One matching owner was found in PetClinic.",
+        pets: [{ name: "Leo", type: "cat" }],
+        activity: "matches found",
+        tone: "success"
+      },
+      ambiguous: {
+        label: "Needs clarification",
+        question: "Find owner Davis",
+        title: "Two owners match “Davis”",
+        summary: "Please clarify which owner you mean.",
+        candidates: [
+          { name: "Betty Davis", pets: "Basil · hamster" },
+          { name: "Harold Davis", pets: "Iggy · lizard" }
+        ],
+        activity: "matches found",
+        tone: "warning"
+      },
+      absent: {
+        label: "No match",
+        question: "Find owner Missing",
+        title: "No matching owner record",
+        summary: "No owner whose last name starts with “Missing” was found in PetClinic.",
+        activity: "no matches",
+        tone: "neutral"
+      },
+      mutation: {
+        label: "Mutation refused",
+        question: "Change Franklin’s phone number",
+        title: "No change was made",
+        summary: "The Clinic Assistant is read-only and cannot change PetClinic records.",
+        activity: "unsupported",
+        tone: "unsupported"
+      },
+      medical: {
+        label: "Medical advice refused",
+        question: "What medicine should I give this sick cat?",
+        title: "Veterinary advice is unsupported",
+        summary: "The Clinic Assistant cannot provide veterinary diagnosis or treatment advice.",
+        activity: "unsupported",
+        tone: "unsupported"
+      }
+    };
+
+    const variants = [
+      { key: "A", name: "Care desk workspace" },
+      { key: "B", name: "Conversation + evidence rail" },
+      { key: "compare", name: "Compare concepts" }
+    ];
+
+    const params = new URLSearchParams(window.location.search);
+    let currentVariant = variants.some(item => item.key === params.get("variant")) ? params.get("variant") : "A";
+    let currentState = states[params.get("state")] ? params.get("state") : "known";
+
+    const stateResultContent = (state, compact = false) => {
+      if (state.pets) {
+        return compact
+          ? `<div class="inline-record"><strong>${state.title}</strong><br><span class="tiny muted">Leo · cat</span></div>`
+          : `<div class="owner-heading"><h3 class="owner-name">${state.title}</h3><span class="record-badge">PetClinic record</span></div>
+             <p class="muted">${state.summary}</p>
+             <div class="pet-list">${state.pets.map(pet => `<article class="pet-card"><span class="pet-icon">${icon("pet")}</span><div class="pet-name">${pet.name}</div><div class="tiny muted">${pet.type}</div></article>`).join("")}</div>`;
+      }
+      if (state.candidates) {
+        return compact
+          ? `<div class="inline-records">${state.candidates.map(candidate => `<div class="inline-record"><strong>${candidate.name}</strong><br><span class="tiny muted">${candidate.pets}</span></div>`).join("")}</div>`
+          : `<div class="owner-heading"><h3 class="owner-name">${state.title}</h3><span class="record-badge">Clarify</span></div>
+             <p class="muted">${state.summary}</p>
+             <div class="candidate-list">${state.candidates.map(candidate => `<article class="candidate"><div class="candidate-heading"><strong>${candidate.name}</strong><span class="tiny muted">${candidate.pets}</span></div></article>`).join("")}</div>`;
+      }
+      return `<div class="owner-heading"><h3 class="owner-name">${state.title}</h3><span class="record-badge">${state.activity}</span></div><p class="muted">${state.summary}</p>`;
+    };
+
+    const activity = (state, rail = false) => rail
+      ? `<div class="trace-entry"><div class="trace-name mono">find_owners_by_last_name</div><div class="trace-outcome ${state.activity === "unsupported" ? "unsupported" : ""}">${state.activity}</div></div>`
+      : `<div class="activity-strip"><div class="tool-line">${icon("tool")}<span class="mono">find_owners_by_last_name</span><span>·</span><strong>${state.activity}</strong></div></div>`;
+
+    const composer = (id, value) => `
+      <form class="composer prototype-form" data-input="${id}">
+        <input class="question-input" id="${id}" value="${value}" aria-label="Ask the Clinic Assistant">
+        <button class="primary-button" type="submit">Ask assistant</button>
+      </form>`;
+
+    const variantA = (state) => `
+      <main class="main variant-a">
+        <section class="hero">
+          <p class="eyebrow">Clinic Assistant</p>
+          <h1>Answers grounded in clinic records.</h1>
+          <p class="lede">A focused staff workspace that puts the verified answer first, while keeping capability limits close at hand.</p>
+        </section>
+        <div class="desk-layout">
+          <aside class="scope-panel">
+            <h2>What I can help with</h2>
+            <ul class="scope-list">
+              <li>Find owners by last-name prefix</li>
+              <li>Show owner names and pet name/type</li>
+              <li>Clarify when multiple owners match</li>
+            </ul>
+            <h2>Outside this assistant</h2>
+            <ul class="scope-list excluded">
+              <li>Changing or scheduling records</li>
+              <li>Medical diagnosis or treatment</li>
+              <li>Addresses, phone numbers, or visits</li>
+            </ul>
+            <div class="privacy-note"><strong>Single turn.</strong><br>This assistant does not remember previous questions.</div>
+          </aside>
+          <section class="answer-workspace">
+            <div class="workspace-top">
+              <h2>Ask about an owner</h2>
+              <p class="muted">Use a full or partial last name.</p>
+              <div class="quick-prompts">
+                <button class="prompt-chip" type="button" data-state="known">Try “owner Franklin”</button>
+                <button class="prompt-chip" type="button" data-state="ambiguous">Try “owner Davis”</button>
+              </div>
+            </div>
+            <div class="answer-body">
+              <div class="answer-label">Response</div>
+              <article class="result-card ${state.tone === "warning" ? "warning" : ""} ${state.tone === "unsupported" ? "unsupported" : ""}">
+                ${stateResultContent(state)}
+              </article>
+              ${activity(state)}
+              ${composer("questionA", state.question)}
+            </div>
+          </section>
+        </div>
+      </main>`;
+
+    const variantB = (state) => `
+      <main class="main variant-b">
+        <div class="chat-layout">
+          <section class="conversation-panel">
+            <header class="conversation-header">
+              <div class="assistant-identity">
+                <span class="assistant-avatar">${icon("assistant")}</span>
+                <div><h1>Clinic Assistant</h1><span class="tiny muted">Owner lookup · single turn</span></div>
+              </div>
+            </header>
+            <div class="conversation-scroll">
+              <div class="message-row user"><div class="message"><div class="message-label">You</div>${state.question}</div></div>
+              <div class="message-row assistant"><div class="message">
+                <div class="message-label">Clinic Assistant</div>
+                <strong>${state.title}</strong>
+                <p class="muted">${state.summary}</p>
+                ${stateResultContent(state, true)}
+              </div></div>
+            </div>
+            <div class="conversation-composer">
+              ${composer("questionB", state.question)}
+              <div class="scope-inline">Only owner last-name lookup is supported. No conversation history is stored.</div>
+            </div>
+          </section>
+          <aside class="evidence-rail">
+            <section class="rail-section">
+              <p class="eyebrow">Evidence</p>
+              <h2>Activity trace</h2>
+              ${activity(state, true)}
+            </section>
+            <section class="rail-section">
+              <h2>Answer boundary</h2>
+              <div class="boundary-grid">
+                <div class="boundary"><span class="boundary-icon">✓</span><span><strong>Grounded</strong><br>Retrieved PetClinic records only</span></div>
+                <div class="boundary"><span class="boundary-icon">✓</span><span><strong>Read-only</strong><br>No records can be changed</span></div>
+                <div class="boundary"><span class="boundary-icon no">—</span><span><strong>No medical advice</strong><br>Diagnosis and treatment excluded</span></div>
+              </div>
+            </section>
+            <section class="rail-section">
+              <h2>Example questions</h2>
+              <div class="quick-prompts">
+                <button class="prompt-chip" type="button" data-state="known">Owner Franklin</button>
+                <button class="prompt-chip" type="button" data-state="ambiguous">Owner Davis</button>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </main>`;
+
+    const comparison = () => `
+      <main class="main">
+        <section class="compare-intro">
+          <p class="eyebrow">Human decision aid</p>
+          <h1>Choose the interaction hierarchy.</h1>
+          <p class="lede">Both concepts honor the same read-only, single-turn contract. Compare how quickly staff can understand an answer, its source, and the assistant’s limits.</p>
+        </section>
+        <div class="comparison-grid">
+          <article class="comparison-card">
+            <p class="eyebrow">Concept A</p>
+            <h2>Care desk workspace</h2>
+            <p class="muted">Answer-first layout with persistent capability guidance.</p>
+            <div class="comparison-preview"><div class="mini-layout-a"><div class="mini-panel mini-stack"><div class="mini-line accent"></div><div class="mini-line"></div><div class="mini-line short"></div><div class="mini-line"></div></div><div class="mini-panel mini-stack"><div class="mini-line accent"></div><div class="mini-line short"></div><div class="mini-panel"></div><div class="mini-line"></div></div></div></div>
+            <ul class="tradeoffs"><li>Fastest scan for structured owner and pet results</li><li>Scope boundaries remain visible</li><li>Feels more like a staff tool than a chat</li></ul>
+            <div class="compare-actions"><button class="compare-button primary" type="button" data-variant="A">Open concept A</button></div>
+          </article>
+          <article class="comparison-card">
+            <p class="eyebrow">Concept B</p>
+            <h2>Conversation + evidence rail</h2>
+            <p class="muted">Familiar chat flow with trust details separated beside it.</p>
+            <div class="comparison-preview"><div class="mini-layout-b"><div class="mini-panel mini-stack"><div class="mini-line accent"></div><div class="mini-bubble user"></div><div class="mini-bubble"></div><div class="mini-line"></div></div><div class="mini-panel mini-stack"><div class="mini-line accent"></div><div class="mini-line"></div><div class="mini-line short"></div></div></div></div>
+            <ul class="tradeoffs"><li>Most familiar “assistant” interaction</li><li>Activity evidence is always visible</li><li>Can imply multi-turn memory unless copy stays explicit</li></ul>
+            <div class="compare-actions"><button class="compare-button primary" type="button" data-variant="B">Open concept B</button></div>
+          </article>
+        </div>
+        <section class="rubric">
+          <h2>Selection rubric</h2>
+          <table>
+            <thead><tr><th>Question</th><th>Concept A</th><th>Concept B</th></tr></thead>
+            <tbody>
+              <tr><td>Can staff scan the result quickly?</td><td>Strong structured hierarchy</td><td>Natural reading flow</td></tr>
+              <tr><td>Are capability limits obvious?</td><td>Persistent scope panel</td><td>Compact boundary rail</td></tr>
+              <tr><td>Is grounding inspectable?</td><td>Inline activity strip</td><td>Dedicated evidence rail</td></tr>
+              <tr><td>Does it avoid implying memory?</td><td>Strong</td><td>Needs explicit messaging</td></tr>
+              <tr><td>Mobile fit</td><td>Answer first, scope follows</td><td>Chat first, evidence follows</td></tr>
+            </tbody>
+          </table>
+        </section>
+      </main>`;
+
+    const setParams = (changes) => {
+      const next = new URLSearchParams(window.location.search);
+      Object.entries(changes).forEach(([key, value]) => next.set(key, value));
+      window.history.replaceState({}, "", `${window.location.pathname}?${next.toString()}`);
+    };
+
+    const renderScenarios = () => {
+      document.getElementById("scenarioControls").innerHTML = Object.entries(states)
+        .map(([key, state]) => `<button class="scenario-button ${key === currentState ? "active" : ""}" type="button" data-state="${key}">${state.label}</button>`)
+        .join("");
+    };
+
+    const selectState = (key) => {
+      if (!states[key]) return;
+      currentState = key;
+      setParams({ state: key });
+      render();
+    };
+
+    const selectVariant = (key) => {
+      if (!variants.some(item => item.key === key)) return;
+      currentVariant = key;
+      setParams({ variant: key });
+      render();
+    };
+
+    const inferState = (value) => {
+      const question = value.toLowerCase();
+      if (question.match(/\b(change|delete|update|add|schedule)\b/)) return "mutation";
+      if (question.match(/\b(medicine|sick|diagnos|treat|dose)\b/)) return "medical";
+      if (question.includes("davis")) return "ambiguous";
+      if (question.includes("missing") || question.includes("unknown")) return "absent";
+      return "known";
+    };
+
+    const wireInteractions = () => {
+      document.querySelectorAll("[data-state]").forEach(button => {
+        button.addEventListener("click", () => selectState(button.dataset.state));
+      });
+      document.querySelectorAll("[data-variant]").forEach(button => {
+        button.addEventListener("click", () => selectVariant(button.dataset.variant));
+      });
+      document.querySelectorAll(".prototype-form").forEach(form => {
+        form.addEventListener("submit", event => {
+          event.preventDefault();
+          selectState(inferState(form.querySelector("input").value));
+        });
+      });
+    };
+
+    const render = () => {
+      renderScenarios();
+      const state = states[currentState];
+      document.getElementById("prototypeRoot").innerHTML =
+        currentVariant === "A" ? variantA(state) : currentVariant === "B" ? variantB(state) : comparison();
+      const variant = variants.find(item => item.key === currentVariant);
+      document.getElementById("variantLabel").textContent =
+        variant.key === "compare" ? variant.name : `${variant.key} — ${variant.name}`;
+      wireInteractions();
+    };
+
+    const cycleVariant = (direction) => {
+      const index = variants.findIndex(item => item.key === currentVariant);
+      selectVariant(variants[(index + direction + variants.length) % variants.length].key);
+    };
+
+    document.getElementById("previousVariant").addEventListener("click", () => cycleVariant(-1));
+    document.getElementById("nextVariant").addEventListener("click", () => cycleVariant(1));
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = nextTheme;
+      setParams({ scoutTheme: nextTheme });
+    });
+    document.addEventListener("keydown", event => {
+      if (["INPUT", "TEXTAREA"].includes(document.activeElement.tagName) || document.activeElement.isContentEditable) return;
+      if (event.key === "ArrowLeft") cycleVariant(-1);
+      if (event.key === "ArrowRight") cycleVariant(1);
+    });
+
+    render();
+  </script>
+</body>
+</html>
