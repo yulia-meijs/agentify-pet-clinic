@@ -107,3 +107,15 @@ Review.
 The corrected slice is **Review ready**. Tests, deployment, smoke observations,
 and automated review provide evidence but do not decide acceptance. The human
 owns the Accepted, Accepted with residual gap, or Not yet accepted judgment.
+
+### Acceptance Gate decision
+
+On 2026-08-31, the human selected **Accepted with these residual gaps**:
+
+- the inherited concurrency contradiction;
+- Missing peer Reciprocal Evidence Review;
+- no automated browser lifecycle test; and
+- the production controls explicitly outside the workshop slice.
+
+This decision accepts the bounded Clinic Assistant evidence without converting
+those gaps into passes or claiming production readiness.
